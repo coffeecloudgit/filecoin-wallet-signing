@@ -18,5 +18,6 @@ package main
 import "github.com/coffeecloudgit/filecoin-wallet-signing/cmd"
 
 func main() {
+	//程序入口
 	cmd.Execute()
 }
