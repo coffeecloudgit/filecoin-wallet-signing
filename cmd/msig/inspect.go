@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/coffeecloudgit/filecoin-wallet-signing/chain/types"
+	"io"
+	"net/http"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/v8/actors/builtin/miner"
@@ -272,4 +275,28 @@ func GetWalletBalance(accountAddr address.Address) (types.BigInt, error) {
 
 	return internal.Lapi.WalletBalance(internal.Ctx, accountAddr)
 
+}
+
+func GetActorAddress(address string) (map[string]interface{}, error) {
+	data := make(map[string]interface{})
+	client := http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(fmt.Sprintf("https://api.filutils.com/api/v2/actor/%s", address))
+
+	if err != nil {
+		return data, err
+	}
+
+	defer resp.Body.Close()
+
+	// 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return data, err
+	}
+
+	// 解析JSON数据
+	if err := json.Unmarshal(body, &data); err != nil {
+		return data, err
+	}
+	return data, nil
 }

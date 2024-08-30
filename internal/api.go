@@ -32,9 +32,11 @@ func ConnectLotus() error {
 	token := "Bearer " + os.Getenv("LOTUS_API_TOKEN")
 	if lotusAPI == "" {
 		//lotusAPI = "https://api.node.glif.io/rpc/v1"
+
 		lotusAPI = "https://node.filutils.com/rpc/v1"
 		token = "Bearer " + "I6505IXYTJWI9LG3EZXQCO7FBZ846QPWXQX"
 		//自定义
+
 	}
 
 	fmt.Println("LOTUS_API : ", lotusAPI)
