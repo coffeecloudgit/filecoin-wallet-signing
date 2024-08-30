@@ -162,6 +162,8 @@ func GetMultiSigPendingTxs(account string) ([]MultiSignTx, error) {
 	//
 	//fmt.Printf("Address: %s, ID: %s \n", mtsaddr.String(), multisigID.String())
 
+	internal.ChangeTks()
+
 	a, err := internal.Lapi.StateGetActor(internal.Ctx, mtsaddr, *internal.CurrentTsk)
 	if err != nil {
 		fmt.Println("Failed to get the address information:", err.Error())

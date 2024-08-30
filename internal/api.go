@@ -75,3 +75,9 @@ func ConnectLotus() error {
 
 	return nil
 }
+
+func ChangeTks() {
+	hts, _ := Lapi.ChainHead(Ctx)
+	Tsk := hts.Key()
+	CurrentTsk = &Tsk
+}
