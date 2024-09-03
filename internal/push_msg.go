@@ -8,6 +8,8 @@ import (
 	"github.com/coffeecloudgit/filecoin-wallet-signing/chain/types"
 	"github.com/coffeecloudgit/filecoin-wallet-signing/signer"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/go-state-types/manifest"
+	"github.com/ipfs/go-cid"
 )
 
 func PushSignedMsg(msg *types.Message, privateKey []byte) error {
@@ -64,6 +66,8 @@ func GetUnSignedMsg(msg *types.Message) (error, string, *types.Message) {
 		return err, "", nil
 	}
 	msg.Nonce = nonce
+	fmt.Println("CurrentTsk", CurrentTsk)
+	fmt.Println("msg", msg)
 	msgWithGas, err := Lapi.GasEstimateMessageGas(Ctx, msg, nil, *CurrentTsk)
 	if err != nil {
 		fmt.Println("GasEstimateMessageGas failed: ", err)
@@ -162,4 +166,10 @@ func PushMsg(message, signature string) (error, string) {
 	fmt.Println("message CID:", msgCid.String())
 
 	return nil, msgCid.String()
+}
+
+func StateActorManifestMultisigKeyCID() (cid.Cid, error) {
+	result, _ := Lapi.StateActorCodeCIDs(Ctx, NetworkVersion)
+	fmt.Println(result)
+	return result[manifest.MultisigKey], nil
 }

@@ -19,6 +19,8 @@ var Lapi *api.FullNodeStruct
 var Ctx = context.Background()
 var CurrentTsk *types.TipSetKey
 
+var NetworkVersion api.NetworkVersion
+
 func init() {
 	err := ConnectLotus()
 	if err != nil {
@@ -72,7 +74,7 @@ func ConnectLotus() error {
 	hts, _ := Lapi.ChainHead(Ctx)
 	Tsk := hts.Key()
 	CurrentTsk = &Tsk
-
+	NetworkVersion, _ = Lapi.StateNetworkVersion(Ctx, Tsk)
 	return nil
 }
 

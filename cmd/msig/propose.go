@@ -2,9 +2,10 @@ package msig
 
 import (
 	"fmt"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	multisig0 "github.com/filecoin-project/specs-actors/actors/builtin/multisig"
+	multisig2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/multisig"
 	"github.com/filecoin-project/specs-actors/v8/actors/builtin"
 	"github.com/filecoin-project/specs-actors/v8/actors/builtin/multisig"
 	"github.com/spf13/cobra"
@@ -158,6 +159,212 @@ func ProposeTransferMessage(fromAddr, mts, accept, fil string) (error, string) {
 		err = fmt.Errorf("地址余额不足:%s, 余额：%v, 需要：%v", fromAddr, balance, requireFunds)
 	}
 	fmt.Printf("send from %v to %v amount %v \n", mtsaddr.String(), acceptAddr.String(), pkg.ToFloat64(abi.TokenAmount(sfil)))
+
+	return err, str
+}
+
+func ProposeAddSignerMessage(fromAddr, mts, editeAddr string, inc bool) (error, string) {
+	from, err := address.NewFromString(fromAddr)
+	if err != nil {
+		fmt.Println("发送地址错误: ", err.Error())
+		return fmt.Errorf("发送地址错误: %s", err.Error()), ""
+	}
+	mtsaddr, err := address.NewFromString(mts)
+	if err != nil {
+		fmt.Println("多签地址错误:", err.Error())
+		return fmt.Errorf("多签地址错误: %s", err.Error()), ""
+	}
+
+	if mtsaddr.Protocol() != address.Actor && mtsaddr.Protocol() != address.ID {
+		fmt.Println("please input a correct multisigAddress")
+		return fmt.Errorf("多签地址错误"), ""
+	}
+
+	editeAddress, err := address.NewFromString(editeAddr)
+	if err != nil {
+		fmt.Println("收币地址错误:", err.Error())
+		return fmt.Errorf("收币地址错误: %s", err.Error()), ""
+	}
+
+	enc, actErr := actors.SerializeParams(&multisig2.AddSignerParams{
+		Signer:   editeAddress,
+		Increase: inc,
+	})
+
+	if actErr != nil {
+		return actErr, ""
+	}
+	amt := abi.NewTokenAmount(0)
+	enc2, actErr2 := actors.SerializeParams(&multisig0.ProposeParams{
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.AddSigner,
+		Params: enc,
+	})
+	if actErr2 != nil {
+		return fmt.Errorf("failed to serialize parameters: %w", actErr2), ""
+	}
+
+	msg := types.Message{
+		From:   from,
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.Propose,
+		Params: enc2,
+	}
+
+	err, str, msgWithGas := internal.GetUnSignedMsg(&msg)
+
+	if err != nil {
+		return err, str
+	}
+
+	requireFunds := msgWithGas.RequiredFunds()
+	balance, err := GetWalletBalance(from)
+
+	if err != nil {
+		return err, ""
+	}
+
+	if balance.Int.Cmp(requireFunds.Int) < 0 {
+		err = fmt.Errorf("地址余额不足:%s, 余额：%v, 需要：%v", fromAddr, balance, requireFunds)
+	}
+	fmt.Printf("send from %v to %v amount %v \n", mtsaddr.String(), editeAddress.String())
+
+	return err, str
+}
+
+func ProposeRemoveSignerMessage(fromAddr, mts, editeAddr string, dec bool) (error, string) {
+	from, err := address.NewFromString(fromAddr)
+	if err != nil {
+		fmt.Println("发送地址错误: ", err.Error())
+		return fmt.Errorf("发送地址错误: %s", err.Error()), ""
+	}
+	mtsaddr, err := address.NewFromString(mts)
+	if err != nil {
+		fmt.Println("多签地址错误:", err.Error())
+		return fmt.Errorf("多签地址错误: %s", err.Error()), ""
+	}
+
+	if mtsaddr.Protocol() != address.Actor && mtsaddr.Protocol() != address.ID {
+		fmt.Println("please input a correct multisigAddress")
+		return fmt.Errorf("多签地址错误"), ""
+	}
+
+	editeAddress, err := address.NewFromString(editeAddr)
+	if err != nil {
+		fmt.Println("收币地址错误:", err.Error())
+		return fmt.Errorf("收币地址错误: %s", err.Error()), ""
+	}
+
+	enc, actErr := actors.SerializeParams(&multisig2.RemoveSignerParams{
+		Signer:   editeAddress,
+		Decrease: dec,
+	})
+
+	if actErr != nil {
+		return actErr, ""
+	}
+	amt := abi.NewTokenAmount(0)
+	enc2, actErr2 := actors.SerializeParams(&multisig0.ProposeParams{
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.RemoveSigner,
+		Params: enc,
+	})
+	if actErr2 != nil {
+		return fmt.Errorf("failed to serialize parameters: %w", actErr2), ""
+	}
+
+	msg := types.Message{
+		From:   from,
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.Propose,
+		Params: enc2,
+	}
+
+	err, str, msgWithGas := internal.GetUnSignedMsg(&msg)
+
+	if err != nil {
+		return err, str
+	}
+
+	requireFunds := msgWithGas.RequiredFunds()
+	balance, err := GetWalletBalance(from)
+
+	if err != nil {
+		return err, ""
+	}
+
+	if balance.Int.Cmp(requireFunds.Int) < 0 {
+		err = fmt.Errorf("地址余额不足:%s, 余额：%v, 需要：%v", fromAddr, balance, requireFunds)
+	}
+	fmt.Printf("send from %v to %v amount %v \n", mtsaddr.String(), editeAddress.String())
+
+	return err, str
+}
+
+func ProposeChangeThresholdMessage(fromAddr, mts string, threshold uint64) (error, string) {
+	from, err := address.NewFromString(fromAddr)
+	if err != nil {
+		fmt.Println("发送地址错误: ", err.Error())
+		return fmt.Errorf("发送地址错误: %s", err.Error()), ""
+	}
+	mtsaddr, err := address.NewFromString(mts)
+	if err != nil {
+		fmt.Println("多签地址错误:", err.Error())
+		return fmt.Errorf("多签地址错误: %s", err.Error()), ""
+	}
+
+	if mtsaddr.Protocol() != address.Actor && mtsaddr.Protocol() != address.ID {
+		fmt.Println("please input a correct multisigAddress")
+		return fmt.Errorf("多签地址错误"), ""
+	}
+
+	enc, actErr := actors.SerializeParams(&multisig2.ChangeNumApprovalsThresholdParams{
+		NewThreshold: threshold,
+	})
+
+	if actErr != nil {
+		return actErr, ""
+	}
+	amt := abi.NewTokenAmount(0)
+	enc2, actErr2 := actors.SerializeParams(&multisig0.ProposeParams{
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.ChangeNumApprovalsThreshold,
+		Params: enc,
+	})
+	if actErr2 != nil {
+		return fmt.Errorf("failed to serialize parameters: %w", actErr2), ""
+	}
+
+	msg := types.Message{
+		From:   from,
+		To:     mtsaddr,
+		Value:  amt,
+		Method: builtin.MethodsMultisig.Propose,
+		Params: enc2,
+	}
+
+	err, str, msgWithGas := internal.GetUnSignedMsg(&msg)
+
+	if err != nil {
+		return err, str
+	}
+
+	requireFunds := msgWithGas.RequiredFunds()
+	balance, err := GetWalletBalance(from)
+
+	if err != nil {
+		return err, ""
+	}
+
+	if balance.Int.Cmp(requireFunds.Int) < 0 {
+		err = fmt.Errorf("地址余额不足:%s, 余额：%v, 需要：%v", fromAddr, balance, requireFunds)
+	}
+	fmt.Printf("change threshold from %v to %v \n", mtsaddr.String(), threshold)
 
 	return err, str
 }

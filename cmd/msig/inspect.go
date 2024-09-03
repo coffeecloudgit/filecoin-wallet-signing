@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/coffeecloudgit/filecoin-wallet-signing/chain/types"
+	multisig2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/multisig"
 	"io"
 	"net/http"
 	"time"
@@ -143,7 +144,7 @@ var inspectCmd = &cobra.Command{
 	},
 }
 
-func GetMultiSigPendingTxs(account string) ([]MultiSignTx, error) {
+func GetMultiAccountInfo(account string) (*MultiAccountInfo, error) {
 
 	//mtsaddr, err := address.NewFromString("t2i35vaqpkqpx3rcmqpttayaa3k4b7qm2fgrqiq3q")
 	mtsaddr, err := address.NewFromString(account)
@@ -220,17 +221,54 @@ func GetMultiSigPendingTxs(account string) ([]MultiSignTx, error) {
 		}
 		p := ""
 		msg := ""
-		var mwdp miner.WithdrawBalanceParams
+		var mwBp miner.WithdrawBalanceParams
+		var addSp multisig2.AddSignerParams
+		var removeSp multisig2.AddSignerParams
+		var cnatP multisig2.ChangeNumApprovalsThresholdParams
 		msg = "send out"
-		if out.Method == 16 {
-			err = mwdp.UnmarshalCBOR(bytes.NewReader(out.Params))
+
+		if out.Method == 5 {
+			err = addSp.UnmarshalCBOR(bytes.NewReader(out.Params))
 			if err != nil {
 				fmt.Println("Parameter parsing failed:", err.Error())
 				return nil
 			}
-			b, _ := json.Marshal(mwdp)
+			b, _ := json.Marshal(addSp)
 			p = string(b)
-			msg = fmt.Sprintf("withdraw from miner  %v FIL", pkg.ToFloat64(mwdp.AmountRequested))
+			msg = fmt.Sprintf("Add Signer  %v", addSp.Signer.String())
+		}
+
+		if out.Method == 6 {
+			err = removeSp.UnmarshalCBOR(bytes.NewReader(out.Params))
+			if err != nil {
+				fmt.Println("Parameter parsing failed:", err.Error())
+				return nil
+			}
+			b, _ := json.Marshal(removeSp)
+			p = string(b)
+			msg = fmt.Sprintf("Remove Signer  %v", removeSp.Signer.String())
+		}
+
+		if out.Method == 8 {
+			err = cnatP.UnmarshalCBOR(bytes.NewReader(out.Params))
+			if err != nil {
+				fmt.Println("Parameter parsing failed:", err.Error())
+				return nil
+			}
+			b, _ := json.Marshal(cnatP)
+			p = string(b)
+			msg = fmt.Sprintf("Change threshold to  %v", cnatP.NewThreshold)
+		}
+
+		if out.Method == 16 {
+			err = mwBp.UnmarshalCBOR(bytes.NewReader(out.Params))
+			if err != nil {
+				fmt.Println("Parameter parsing failed:", err.Error())
+				return nil
+			}
+			b, _ := json.Marshal(mwBp)
+			p = string(b)
+			msg = fmt.Sprintf("withdraw from miner  %v FIL", pkg.ToFloat64(mwBp.AmountRequested))
 		}
 		if out.Method == 23 {
 			addr := address.Address{}
@@ -250,27 +288,37 @@ func GetMultiSigPendingTxs(account string) ([]MultiSignTx, error) {
 				Mount: pkg.ToFloat64(out.Value), Params: p, Approved: out.Approved, Ps: msg})
 		return nil
 	})
-	return multiSigPendingTxs, err
+	multiSignInfo := MultiAccountInfo{Signers: mstate.Signers, NumApprovalsThreshold: mstate.NumApprovalsThreshold,
+		InitialBalance: mstate.InitialBalance, StartEpoch: mstate.StartEpoch, UnlockDuration: mstate.UnlockDuration, MultiSignTxs: multiSigPendingTxs}
+	return &multiSignInfo, err
 }
 
-func GetAccountBalance(account string) (*types.BigInt, *types.TipSet, error) {
+func GetAccountInfo(account string) (*AccountInfo, error) {
 	accountAddr, err := address.NewFromString(account)
 	if err != nil {
-		return new(types.BigInt), nil, err
+		return nil, err
 	}
 	tipSet, err := internal.Lapi.ChainHead(internal.Ctx)
 
 	if err != nil {
-		return new(types.BigInt), nil, err
+		return nil, err
 	}
+
+	Tsk := tipSet.Key()
+
 	balance, err := internal.Lapi.WalletBalance(internal.Ctx, accountAddr)
 
 	if err != nil {
-		return new(types.BigInt), nil, err
+		return nil, err
 	}
 
-	return &balance, tipSet, nil
+	result, err := internal.Lapi.StateLookupID(internal.Ctx, accountAddr, Tsk)
 
+	if err != nil {
+		return nil, err
+	}
+
+	return &AccountInfo{Address: accountAddr, Id: result.String(), Height: tipSet.Height(), Balance: balance}, nil
 }
 
 func GetWalletBalance(accountAddr address.Address) (types.BigInt, error) {
