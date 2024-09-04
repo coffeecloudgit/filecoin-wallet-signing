@@ -128,6 +128,65 @@ func GetMessage(fromAddr, multiAddr, txId string) (error, string) {
 
 }
 
+func GetCancelMessage(fromAddr, multiAddr, txId string) (error, string) {
+	from, err := address.NewFromString(fromAddr)
+	if err != nil {
+		fmt.Println("decode fromAddr failed:: ", err.Error())
+		return err, ""
+	}
+
+	balance, err := GetWalletBalance(from)
+
+	if err != nil {
+		return err, ""
+	}
+
+	maddr, err := address.NewFromString(multiAddr)
+	if err != nil {
+		fmt.Println("decode multisigAddress failed:: ", err.Error())
+		return err, ""
+	}
+
+	if maddr.Protocol() != address.Actor && maddr.Protocol() != address.ID {
+		fmt.Println("please input a correct multisigAddress")
+		return fmt.Errorf("please input a correct multisigAddress"), ""
+	}
+
+	txid, err := strconv.Atoi(txId)
+	if err != nil {
+		fmt.Println("Transaction ID failed: ", err.Error())
+		return err, ""
+	}
+
+	params, err := actors.SerializeParams(&multisig.TxnIDParams{ID: multisig.TxnID(txid)})
+	if err != nil {
+		fmt.Println("actors.SerializeParams &miner2.WithdrawBalanceParams failed: ", err)
+		return err, ""
+	}
+
+	msg := types.Message{
+		From:   from,
+		To:     maddr,
+		Value:  abi.NewTokenAmount(0),
+		Method: builtin.MethodsMultisig.Cancel,
+		Params: params,
+	}
+	err, str, msgWithGas := internal.GetUnSignedMsg(&msg)
+
+	if err != nil {
+		return err, str
+	}
+
+	requireFunds := msgWithGas.RequiredFunds()
+
+	if balance.Int.Cmp(requireFunds.Int) < 0 {
+		err = fmt.Errorf("地址余额不足:%s, 余额：%v, 需要：%v", fromAddr, balance, requireFunds)
+	}
+
+	return err, str
+
+}
+
 func PushTx(message, signature string) (error, string) {
 	return internal.PushMsg(message, signature)
 }

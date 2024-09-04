@@ -2,14 +2,14 @@ module github.com/coffeecloudgit/filecoin-wallet-signing
 
 go 1.21
 
-toolchain go1.22.1
+//toolchain go1.22.1
 
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/filecoin-project/go-address v1.1.0
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-crypto v0.0.1
-	github.com/filecoin-project/go-data-transfer v1.15.2
+	github.com/filecoin-project/go-data-transfer v1.15.3
 	github.com/filecoin-project/go-fil-markets v1.25.0
 	github.com/filecoin-project/go-jsonrpc v0.3.2
 	github.com/filecoin-project/go-state-types v0.14.0
@@ -27,7 +27,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.9.0
-	github.com/supranational/blst v0.3.10
+	github.com/supranational/blst v0.3.13
 	github.com/whyrusleeping/cbor-gen v0.1.1
 	github.com/xorcare/golden v0.6.1-0.20191112154924-b87f686d7542
 	go.uber.org/zap v1.27.0
